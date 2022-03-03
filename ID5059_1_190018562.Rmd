@@ -10,7 +10,7 @@ Please find committed changes in my github repository <https://github.com/selsie
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-Import DataSet
+Import DataSet:
 
 ```{r}
 vehicles <- read.csv("C:/Users/Sophia/ID5059/vehicles.csv")
@@ -33,24 +33,20 @@ test_set = subset(vehicles, split == FALSE)
 We will train on 80% of our data and then test on 20% of the data.
 
 ```{r}
-library(tidyverse)
-ggplot()
+colnames(vehicles)
+Price <- training_set$price
+Region <- as.integer(as.factor(training_set$region))
+Year <- training_set$year
+par(mfrow=c(3,2))
+hist(Price)
+boxplot(Price, horizontal=TRUE)
+hist(Region)
+boxplot(Region, horizontal=TRUE)
+hist(Year)
+boxplot(Year, horizontal=TRUE)
 ```
 
-.
+Data Wrangle for purposes of removing "NA"'S and fuller elements
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+```{r}
 ```
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
