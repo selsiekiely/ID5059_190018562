@@ -4,14 +4,40 @@ author: "Sophia"
 date: "02/03/2022"
 output: html_document
 ---
+Please find committed changes in my github repository <https://github.com/selsiekiely/ID5059_190018562>.
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+Import DataSet
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+```{r}
+vehicles <- read.csv("C:/Users/Sophia/ID5059/vehicles.csv")
+head(vehicles)
+```
+
+## Testing and Training
+
+We split the data into training and test data using a 80/20 split respectively. Seed is set at last
+four digits of student ID number.
+
+```{r}
+library(caTools)
+set.seed(8562)
+split = sample.split(vehicles$price, SplitRatio = 0.8)
+training_set = subset(vehicles, split == TRUE)
+test_set = subset(vehicles, split == FALSE)
+```
+
+We will train on 80% of our data and then test on 20% of the data.
+
+```{r}
+library(tidyverse)
+ggplot()
+```
+
+.
 
 When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
 
