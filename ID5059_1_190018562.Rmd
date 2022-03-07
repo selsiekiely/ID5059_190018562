@@ -34,6 +34,16 @@ We will train on 80% of our data and then test on 20% of the data.
 
 ```{r}
 colnames(vehicles)
+```
+
+Remove unnecessary columns such as ‘id’, ’URL,’ region’, ‘region_url’, ‘image_url’, ‘lat’, ‘size’, and ’long’ because these do not contain metric data that can aid price entry predictions.
+
+```{r}
+library(dplyr)
+vehicles <- vehicles %>% select(-id, -url, -region, -region_url, -image_url, -lat, -size, -long)
+```
+
+```{r}
 Price <- training_set$price
 Region <- as.integer(as.factor(training_set$region))
 Year <- training_set$year
