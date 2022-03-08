@@ -4,17 +4,29 @@ author: "Sophia"
 date: "02/03/2022"
 output: html_document
 ---
+
 Please find committed changes in my github repository <https://github.com/selsiekiely/ID5059_190018562>.
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-Import DataSet:
+Import DataSet containing factors for sales of used cars.
 
 ```{r}
 vehicles <- read.csv("C:/Users/Sophia/ID5059/vehicles.csv")
 head(vehicles)
+colnames(vehicles)
+```
+We provide the following data wrangling;
+
+Remove unnecessary columns such as ‘id’, ’URL,’ region’, ‘region_url’, ‘image_url’, ‘lat’, ‘size’, and ’long’ because these do not contain metric data that can be utilised in price entry predictions even with feature engineering.
+
+Change 
+
+```{r}
+library(dplyr)
+vehicles <- vehicles %>% select(-id, -url, -region, -region_url, -image_url, -lat, -size, -long)
 ```
 
 ## Testing and Training
@@ -23,25 +35,32 @@ We split the data into training and test data using a 80/20 split respectively. 
 four digits of student ID number.
 
 ```{r}
-library(caTools)
 set.seed(8562)
-split = sample.split(vehicles$price, SplitRatio = 0.8)
-training_set = subset(vehicles, split == TRUE)
-test_set = subset(vehicles, split == FALSE)
+  
+# create an index for separating out test and training data (50% split) 
+  
+trainInd <- sample(1:nrow(vehicles), round(nrow(vehicles)*0.80))
+testResponse <- vehicles[-trainInd , "price"]
 ```
 
 We will train on 80% of our data and then test on 20% of the data.
 
 ```{r}
-colnames(vehicles)
+library(randomForest)
+library(ISLR2)
+library(tidyverse)
 ```
-
-Remove unnecessary columns such as ‘id’, ’URL,’ region’, ‘region_url’, ‘image_url’, ‘lat’, ‘size’, and ’long’ because these do not contain metric data that can aid price entry predictions.
 
 ```{r}
-library(dplyr)
-vehicles <- vehicles %>% select(-id, -url, -region, -region_url, -image_url, -lat, -size, -long)
+vehiclesBag <- randomForest(price ~ ., data = vehicles, subset = trainInd, mtry = 12, ntree = 25)
+
+# predict to the test data 
+bagPred <- predict(vehiclesBag , newdata = vehicles[-trainInd , ])
+  
+# our test MSE
+mean((bagPred - testResponse)^2)
 ```
+We receive an error because there are missing values in object.
 
 ```{r}
 Price <- training_set$price
