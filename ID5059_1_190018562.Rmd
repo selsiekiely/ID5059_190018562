@@ -18,29 +18,44 @@ vehicles <- read.csv("C:/Users/Sophia/ID5059/vehicles.csv")
 head(vehicles)
 colnames(vehicles)
 ```
+
 We provide the following data wrangling;
 
-Remove unnecessary columns such as ‘id’, ’URL,’ region’, ‘region_url’, ‘image_url’, ‘lat’, ‘size’, and ’long’ because these do not contain metric data that can be utilised in price entry predictions even with feature engineering.
+Remove unnecessary columns such as ‘id’, ’URL,’ region’, ‘region_url’, ‘image_url’, ‘lat’, ‘size’, 'VIN' and ’long’ because these do not contain metric data that can be utilised in price entry predictions even with feature engineering.
 
-Change 
 
 ```{r}
 library(dplyr)
 vehicles <- vehicles %>% 
-  select(-id, -url, -region, -region_url, -image_url, -lat, -size, -long)
+  select(-id, -url, -region, -region_url, -image_url, -lat, -size, -long, -VIN)
+```
 
+Even after this removals it is necessary to remove rows that contain too many NAs. If we summarise all the variables we can also locate outliers.
+
+```{r}
+summary(vehicles$price)
+max(vehicles$price)
+n <- length(vehicles$price)
+sort(vehicles$price,partial=n-2)[n-2]
+summary(vehicles$year)
+```
+
+
+```{r}
+#Make all entries numeric
 for(i in 1:ncol(vehicles)) {       # for-loop over columns
   vehicles[ , i] <- as.numeric(as.character(vehicles[ , i]))
 }
-#vehicles$manufacturer <- as.numeric(as.character(vehicles$manufacturer))
-#vehicles$model <- as.numeric(as.character(vehicles$model))
-#vehicles$condition <- as.numeric(as.character((vehicles$condition)))
-#vehicles$fuel <- as.numeric((as.character(vehicles$fuel)))
-#vehicles$title_status <- as.numeric(as.character(vehicles$title_status))
-#vehicles$transmission <- as.numeric(as.character(behicles$transmission))
-#vehicles$
 
-vehicles_lm <- lm(price ~ year + condition + manufacturer + odometer, data = vehicles, na.action = na.omit)
+#vehicles_lm <- lm(price ~ year + condition + manufacturer + odometer, data = vehicles, na.action = #na.omit)
+
+#However, this does not work because there are 0 non-NA cases. We need to find an alternative way to #replace the NAs.
+#This would be overkill with ALL of the variables. Using summaries for each variable lets cut down to our 4 choices of variant now.
+
+summary(vehicles$price)
+plot(vehicles$price)
+summary(vehicles)
+
 ```
 
 ## Testing and Training
