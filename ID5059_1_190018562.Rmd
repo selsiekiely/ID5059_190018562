@@ -26,7 +26,21 @@ Change
 
 ```{r}
 library(dplyr)
-vehicles <- vehicles %>% select(-id, -url, -region, -region_url, -image_url, -lat, -size, -long)
+vehicles <- vehicles %>% 
+  select(-id, -url, -region, -region_url, -image_url, -lat, -size, -long)
+
+for(i in 1:ncol(vehicles)) {       # for-loop over columns
+  vehicles[ , i] <- as.numeric(as.character(vehicles[ , i]))
+}
+#vehicles$manufacturer <- as.numeric(as.character(vehicles$manufacturer))
+#vehicles$model <- as.numeric(as.character(vehicles$model))
+#vehicles$condition <- as.numeric(as.character((vehicles$condition)))
+#vehicles$fuel <- as.numeric((as.character(vehicles$fuel)))
+#vehicles$title_status <- as.numeric(as.character(vehicles$title_status))
+#vehicles$transmission <- as.numeric(as.character(behicles$transmission))
+#vehicles$
+
+vehicles_lm <- lm(price ~ year + condition + manufacturer + odometer, data = vehicles, na.action = na.omit)
 ```
 
 ## Testing and Training
