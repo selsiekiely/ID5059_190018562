@@ -19,15 +19,18 @@ head(vehicles)
 colnames(vehicles)
 ```
 
-We provide the following data wrangling;
+We provide the following data wrangling from reading the general description on KAGGLE:
 
-Remove unnecessary columns such as ‘id’, ’URL,’ region’, ‘region_url’, ‘image_url’, ‘lat’, ‘size’, 'VIN' and ’long’ because these do not contain metric data that can be utilised in price entry predictions even with feature engineering.
+Remove unnecessary columns such as ‘id’, ’URL', ‘region_url’, 'VIN', ‘image_url’,'description', and 'county' because these do not contain metric data that can be utilised in price entry predictions even with feature engineering.
 
+'lat' and 'long' are removed because they are a feature of location that is metricized in state instead.
+
+'size' removed because it is 72% NA.
 
 ```{r}
 library(dplyr)
 vehicles <- vehicles %>% 
-  select(-id, -url, -region, -region_url, -image_url, -lat, -size, -long, -VIN)
+  select(-id, -url, -region_url, -VIN, -image_url, -description, -county, -lat, -long, -size)
 ```
 
 Even after this removals it is necessary to remove rows that contain too many NAs. If we summarise all the variables we can also locate outliers.
@@ -35,10 +38,33 @@ Even after this removals it is necessary to remove rows that contain too many NA
 ```{r}
 summary(vehicles$price)
 max(vehicles$price)
-n <- length(vehicles$price)
-sort(vehicles$price,partial=n-2)[n-2]
-summary(vehicles$year)
+hist(log(vehicles$price), main = "Histogram of Used Vehicle Prices", xlab = "log(Vehicle Price)")
 ```
+
+Let us remove data that is above 100km (log(100000) = 11) in entry price because these values hinder a model being made on entry price. They are clearly out-liers because only a small subset of buyers represent the ability to pay this much to buy a used car.
+
+```{r}
+vehicles <- vehicles %>%
+  filter(price <= 100000)
+```
+
+
+
+```{r}
+library(ggplot2)
+ggplot(vehicles, aes(x = factor(manufacturer), fill = factor(manufacturer))) +
+  geom_bar() + 
+  xlab("Car Manufacturers") +
+  theme(axis.text.x = element_text(angle = 90, hjust=1, size = 4))
+```
+
+```{r}
+ggplot(vehicles, aes(x = factor(state), fill = factor(state))) +
+  geom_bar() + 
+  xlab("State") +
+  theme(axis.text.x = element_text(angle = 90, hjust=1, size = 4))
+```
+We will definitely use state as one of the covariates because it is a full column. However, we will need to change the variables to be numeric to account for placement in the model.
 
 
 ```{r}
@@ -49,12 +75,24 @@ for(i in 1:ncol(vehicles)) {       # for-loop over columns
 
 #vehicles_lm <- lm(price ~ year + condition + manufacturer + odometer, data = vehicles, na.action = #na.omit)
 
-#However, this does not work because there are 0 non-NA cases. We need to find an alternative way to #replace the NAs.
-#This would be overkill with ALL of the variables. Using summaries for each variable lets cut down to our 4 choices of variant now.
+```
 
-summary(vehicles$price)
-plot(vehicles$price)
-summary(vehicles)
+Now we have decided on co-variants there are still some NA values to be replaced. We will "impute" using the modal; the most common value in that column. This is for non-numeric, character data. The modal can be imputed via the following code;
+
+```{r}
+
+#Create an index for columns that contain non-numeric data (e.g. manufacturer)
+karacter <- !sapply(vehicles, is.numeric)
+
+#Create a function that finds the mode
+mode <- function(x){
+      ux <- sort(unique(x))
+      ux[which.max(tabulate(match(x, ux)))] 
+}
+
+#Replace the NAs in character columns with the most frequent value
+vehicles[karacter] <- lapply(vehicles[karacter], function(x)
+              replace(x, is.na(x), mode(x[!is.na(x)])))
 
 ```
 
