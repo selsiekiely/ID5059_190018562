@@ -57,6 +57,14 @@ vehicles <- vehicles %>%
   filter(price >= 750)
 ```
 
+```{r}
+ggplot(vehicles, aes(x = price)) +
+  geom_density() +
+  facet_wrap(~condition)
+```
+
+We can see here that despite NA values holding no whereabouts to their condition, we can see they still follow the same trend in price and it is easy to assume imputes via modal condition.
+
 We will now see the columns with the number of NAs as a percentage
 
 ```{r}
@@ -96,13 +104,6 @@ ggplot(vehicles, aes(x = factor(state), fill = factor(state))) +
 
 We will definitely use state as one of the covariates because it is a full column. However, we will need to change the variables to be numeric to account for placement in the model.
 
-```{r}
-ggplot(vehicles, aes(x = price)) +
-  geom_density() +
-  facet_wrap(~condition)
-```
-
-We can see here that despite NA values holding no whereabouts to their condition, we can see they still follow the same trend in price and it is easy to assume imputes via modal condition.
 
 ```{r}
 #Make all entries numeric
