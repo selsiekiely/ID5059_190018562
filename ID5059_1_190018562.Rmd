@@ -15,8 +15,6 @@ Import DataSet containing factors for sales of used cars.
 
 ```{r}
 vehicles <- read.csv("C:/Users/Sophia/ID5059/vehicles.csv")
-head(vehicles)
-colnames(vehicles)
 ```
 
 We provide the following data wrangling from reading the general description on KAGGLE:
@@ -25,12 +23,18 @@ Remove unnecessary columns such as ‘id’, ’URL', ‘region_url’, 'VIN', �
 
 'lat' and 'long' are removed because they are a feature of location that is metricized in state instead.
 
-'size' removed because it is 72% NA.
+'size' removed straight away because kaggle says it is 72% NA.
+
+```{r, echo = FALSE}
+library(dplyr)
+```
 
 ```{r}
-library(dplyr)
 vehicles <- vehicles %>% 
   select(-id, -url, -region_url, -VIN, -image_url, -description, -county, -lat, -long, -size)
+
+#Replace Blanks with NAs
+vehicles[vehicles == ""] <- NA
 ```
 
 Even after this removals it is necessary to remove rows that contain too many NAs. If we summarise all the variables we can also locate outliers.
@@ -38,20 +42,45 @@ Even after this removals it is necessary to remove rows that contain too many NA
 ```{r}
 summary(vehicles$price)
 max(vehicles$price)
-hist(log(vehicles$price), main = "Histogram of Used Vehicle Prices", xlab = "log(Vehicle Price)")
+hist(vehicles$price, breaks = 50, main = "Histogram of Used Vehicle Prices", xlab = "Vehicle Price in $")
+sum(vehicles$price > 100000)
+sum(vehicles$price < 750)
 ```
 
-Let us remove data that is above 100km (log(100000) = 11) in entry price because these values hinder a model being made on entry price. They are clearly out-liers because only a small subset of buyers represent the ability to pay this much to buy a used car.
+Let us remove data that is above 100k$ in entry price because there are only 655 out of 426880 at this price. They are outliers because only a small subset of buyers represent the ability to pay this much to buy a used car.
+
+We will also drop rows with entry prices less than 750 because these lower prices will be less relevant than drawing correlations from the larger changes in entry prices. We drio 44778 rows.
 
 ```{r}
 vehicles <- vehicles %>%
-  filter(price <= 100000)
+  filter(price <= 100000) %>%
+  filter(price >= 750)
 ```
 
-
+We will now see the columns with the number of NAs as a percentage
 
 ```{r}
+colSums(is.na(vehicles))/nrow(vehicles)*100
+```
+
+We will now remove columns condition, cylinders, drive, type and paint color because these contain NAs greater than 20%.
+
+```{r}
+vehicles <- vehicles %>% 
+  select(-condition, -cylinders, -drive, -type, -paint_color)
+```
+
+```{r, echo = FALSE}
 library(ggplot2)
+```
+
+```{r}
+summary(vehicles$region)
+```
+
+```{r}
+summary(vehicles$manufacturer)
+
 ggplot(vehicles, aes(x = factor(manufacturer), fill = factor(manufacturer))) +
   geom_bar() + 
   xlab("Car Manufacturers") +
@@ -64,6 +93,7 @@ ggplot(vehicles, aes(x = factor(state), fill = factor(state))) +
   xlab("State") +
   theme(axis.text.x = element_text(angle = 90, hjust=1, size = 4))
 ```
+
 We will definitely use state as one of the covariates because it is a full column. However, we will need to change the variables to be numeric to account for placement in the model.
 
 ```{r}
@@ -111,7 +141,7 @@ four digits of student ID number.
 ```{r}
 set.seed(8562)
   
-# create an index for separating out test and training data (50% split) 
+# create an index for separating out test and training data 
   
 trainInd <- sample(1:nrow(vehicles), round(nrow(vehicles)*0.80))
 testResponse <- vehicles[-trainInd , "price"]
@@ -119,35 +149,24 @@ testResponse <- vehicles[-trainInd , "price"]
 
 We will train on 80% of our data and then test on 20% of the data.
 
-```{r}
+```{r, echo= FALSE}
 library(randomForest)
 library(ISLR2)
 library(tidyverse)
 ```
 
 ```{r}
-vehiclesBag <- randomForest(price ~ ., data = vehicles, subset = trainInd, mtry = 12, ntree = 25)
+#vehiclesBag <- randomForest(price ~ ., data = vehicles, subset = trainInd, mtry = 12, ntree = 25)
 
 # predict to the test data 
-bagPred <- predict(vehiclesBag , newdata = vehicles[-trainInd , ])
+#bagPred <- predict(vehiclesBag , newdata = vehicles[-trainInd , ])
   
 # our test MSE
-mean((bagPred - testResponse)^2)
+#mean((bagPred - testResponse)^2)
 ```
 We receive an error because there are missing values in object.
 
-```{r}
-Price <- training_set$price
-Region <- as.integer(as.factor(training_set$region))
-Year <- training_set$year
-par(mfrow=c(3,2))
-hist(Price)
-boxplot(Price, horizontal=TRUE)
-hist(Region)
-boxplot(Region, horizontal=TRUE)
-hist(Year)
-boxplot(Year, horizontal=TRUE)
-```
+
 
 Data Wrangle for purposes of removing "NA"'S and fuller elements
 
