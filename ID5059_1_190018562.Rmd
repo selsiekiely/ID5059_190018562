@@ -42,19 +42,23 @@ Even after this removals it is necessary to remove rows that contain too many NA
 ```{r}
 summary(vehicles$price)
 max(vehicles$price)
-hist(vehicles$price, breaks = 50, main = "Histogram of Used Vehicle Prices", xlab = "Vehicle Price in $")
+hist(log(vehicles$price), breaks = 50, main = "Histogram of Used Vehicle Prices", xlab = "Log of Vehicle Price in $")
 sum(vehicles$price > 100000)
 sum(vehicles$price < 750)
 ```
 
-Let us remove data that is above 100k$ in entry price because there are only 655 out of 426880 at this price. They are outliers because only a small subset of buyers represent the ability to pay this much to buy a used car.
+Let us remove data that is above 100k$ (log(100000) = 11) in entry price because there are only 655 out of 426880 at this price. They are outliers because only a small subset of buyers represent the ability to pay this much to buy a used car.
 
-We will also drop rows with entry prices less than 750 because these lower prices will be less relevant than drawing correlations from the larger changes in entry prices. We drio 44778 rows.
+We will also drop rows with entry prices less than 750 because these lower prices will be less relevant than drawing correlations from the larger changes in entry prices. We drop 44778 rows.
 
 ```{r}
 vehicles <- vehicles %>%
   filter(price <= 100000) %>%
   filter(price >= 750)
+```
+
+```{r, echo = FALSE}
+library(ggplot2)
 ```
 
 ```{r}
@@ -71,16 +75,13 @@ We will now see the columns with the number of NAs as a percentage
 colSums(is.na(vehicles))/nrow(vehicles)*100
 ```
 
-We will now remove columns condition, cylinders, drive, type and paint color because these contain NAs greater than 20%.
+We will now remove columns condition, cylinders, drive, type and paint color because these contain NAs greater than 20%. Contradiction from earlier when we discussed Condition NAs being easily imputable, however we want to make it easy for ourselves and impute as least values as possible.
 
 ```{r}
 vehicles <- vehicles %>% 
   select(-condition, -cylinders, -drive, -type, -paint_color)
 ```
 
-```{r, echo = FALSE}
-library(ggplot2)
-```
 
 ```{r}
 summary(vehicles$region)
@@ -111,7 +112,7 @@ for(i in 1:ncol(vehicles)) {       # for-loop over columns
   vehicles[ , i] <- as.numeric(as.character(vehicles[ , i]))
 }
 
-#vehicles_lm <- lm(price ~ year + condition + manufacturer + odometer, data = vehicles, na.action = #na.omit)
+vehicles_lm <- lm(price ~ year + manufacturer + transmission + state, data = vehicles, na.action = na.exclude)
 
 ```
 
