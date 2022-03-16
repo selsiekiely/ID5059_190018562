@@ -11,7 +11,7 @@ Please find committed changes in my github repository <https://github.com/selsie
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-Import DataSet containing factors for sales of used cars.
+Import DataSet containing factors for sales of used cars. This dataset is quite large(1.5GB). We estimate having to reduce the data set quite heavily in order to run models quickly.
 
 ```{r}
 vehicles <- read.csv("C:/Users/Sophia/ID5059/vehicles.csv")
@@ -28,6 +28,8 @@ Remove unnecessary columns such as ‘id’, ’URL', ‘region_url’, 'VIN', �
 ```{r, echo = FALSE}
 library(dplyr)
 ```
+
+There are no duplicated rows.
 
 ```{r}
 vehicles <- vehicles %>% 
@@ -103,20 +105,7 @@ ggplot(vehicles, aes(x = factor(state), fill = factor(state))) +
   theme(axis.text.x = element_text(angle = 90, hjust=1, size = 4))
 ```
 
-We will definitely use state as one of the covariates because it is a full column. However, we will need to change the variables to be numeric to account for placement in the model.
-
-
-```{r}
-#Make all entries numeric
-for(i in 1:ncol(vehicles)) {       # for-loop over columns
-  vehicles[ , i] <- as.numeric(as.character(vehicles[ , i]))
-}
-
-vehicles_lm <- lm(price ~ year + manufacturer + transmission + state, data = vehicles, na.action = na.exclude)
-
-```
-
-Now we have decided on co-variants there are still some NA values to be replaced. We will "impute" using the modal; the most common value in that column. This is for non-numeric, character data. The modal can be imputed via the following code;
+We will "impute" using the modal; the most common value in that column. This is for non-numeric, character data. The modal can be imputed via the following code;
 
 ```{r}
 
@@ -135,6 +124,44 @@ vehicles[karacter] <- lapply(vehicles[karacter], function(x)
 
 ```
 
+Now for numeric variables, we use the impute function to change NAs to the mean. 
+
+```{r}
+vehicles$year[is.na(vehicles$year)] <- median(vehicles$year, na.rm = T)
+vehicles$odometer[is.na(vehicles$odometer)] <- median(vehicles$odometer, na.rm = T)
+```
+
+We will definitely use state as one of the co-variates because it is a full column. However, we will need to change the variables to be numeric to account for placement in the model.
+
+```{r}
+
+#Make all entries numeric
+for(i in 1:ncol(vehicles)) {       
+  vehicles[ , i] <- as.numeric(as.character(vehicles[ , i]))
+}
+
+```
+Before modelling, lets choose covariates by comparing using machine learning feature selection;
+
+```{r}
+# ensure results are repeatable
+set.seed(7)
+# load the library
+library(mlbench)
+library(caret)
+
+#prepare training scheme
+control <- trainControl(method="repeatedcv", number=10, repeats=3)
+# train the model
+model <- train(price~., data=trainInd, method="lvq", preProcess="scale", trControl=control)
+# estimate variable importance
+importance <- varImp(model, scale=FALSE)
+# summarize importance
+print(importance)
+# plot importance
+plot(importance)
+```
+
 ## Testing and Training
 
 We split the data into training and test data using a 80/20 split respectively. Seed is set at last
@@ -146,7 +173,21 @@ set.seed(8562)
 # create an index for separating out test and training data 
   
 trainInd <- sample(1:nrow(vehicles), round(nrow(vehicles)*0.80))
-testResponse <- vehicles[-trainInd , "price"]
+testResponse <- vehicles[-trainInd , "price"] 
+
+```
+
+```{r}
+vehicles_lm <- lm(price ~ year + manufacturer + transmission + state, data = vehicles, na.action = na.exclude)
+
+predict_price <- predict(vehicles_lm, price)
+```
+
+```{r}
+library(rpart)
+  
+# the CP = 0 here means there will be no pruning on the basis of the cross-valdiation - we grow a big tree for pruning later
+fit <- rpart(price ~ year + manufacturer + transmission + state, data = vehicles, na.action = na.exclude, method="class", control = rpart.control(cp=0))
 ```
 
 We will train on 80% of our data and then test on 20% of the data.
