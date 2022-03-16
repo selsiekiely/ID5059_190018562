@@ -85,9 +85,6 @@ vehicles <- vehicles %>%
 ```
 
 
-```{r}
-summary(vehicles$region)
-```
 
 ```{r}
 summary(vehicles$manufacturer)
@@ -141,33 +138,22 @@ vehicles$odometer[is.na(vehicles$odometer)] <- mode(vehicles$odometer)
 We will definitely use state as one of the co-variates because it is a full column. However, we will need to change the variables to be numeric to account for placement in the model.
 
 ```{r}
-
-#Make all entries numeric
-for(i in 1:ncol(vehicles)) {       
-  vehicles[ , i] <- as.numeric(as.character(vehicles[ , i]))
-}
-
+sapply(vehicles, class)
+vehicles$year <- as.numeric(vehicles$year)
+vehicles$odometer <- as.numeric(vehicles$odometer)
+vehicles$region <- as.numeric(as.character(vehicles$region))
+as.numeric(vehicles$region, na.rm = TRUE)
 ```
-Before modelling, lets choose covariates by comparing using machine learning feature selection;
 
 ```{r}
-# ensure results are repeatable
-set.seed(7)
-# load the library
-library(mlbench)
-library(caret)
 
-#prepare training scheme
-control <- trainControl(method="repeatedcv", number=10, repeats=3)
-# train the model
-model <- train(price~., data=trainInd, method="lvq", preProcess="scale", trControl=control)
-# estimate variable importance
-importance <- varImp(model, scale=FALSE)
-# summarize importance
-print(importance)
-# plot importance
-plot(importance)
+#Make all entries numeric
+#for(i in 1:ncol(vehicles)) {       
+#  vehicles[ , i] <- as.numeric(as.character(vehicles[ , i]))
+#}
+
 ```
+
 
 ## Testing and Training
 
@@ -184,14 +170,75 @@ testResponse <- vehicles[-trainInd , "price"]
 
 ```
 
+Before modelling, lets choose co-variates by comparing using machine learning feature selection;
+
+```{r}
+# ensure results are repeatable
+
+set.seed(7)
+# load the library
+library(mlbench)
+library(caret)
+
+#prepare training scheme
+#control <- trainControl(method="repeatedcv", number=10, repeats=3)
+
+# train the model
+#model <- train(price~., data=trainInd, method="lvq", preProcess="scale", trControl=control)
+# estimate variable importance
+#importance <- varImp(model, scale=FALSE)
+# summarize importance
+#print(importance)
+# plot importance
+#plot(importance)
+```
+
 ```{r}
 #Fitting a linear model with log of price because price is large
 vehicles_lm <- lm(log(price) ~ year + manufacturer + transmission + state, data = vehicles, na.action = na.exclude)
 
+#na.exclude allows the model to run because rows with NAs are excluded. However, this does make it dodgy.
+
 summary(vehicles_lm)
 ```
 
-The residuals indicate an ok model because max and min are similar magnitude and suggest symmetry. 
+The residuals indicate an ok model because max and min are similar magnitude and suggest symmetry. The p value is significantly lower than 0.01 also suggesting a good fit.
+
+```{r}
+#Fitting a linear model with log of price because price is large
+#vehicles_lm <- lm(log(price) ~ manufacturer + model + fuel + state, data = vehicles, na.action = na.exclude)
+
+#summary(vehicles_lm)
+```
+However for this one we received an error message for too large data.
+
+```{r}
+#Fitting a linear model with log of price because price is large
+#vehicles_lm <- lm(log(price) ~ year + manufacturer + model + state, data = vehicles, na.action = #na.exclude)
+
+#summary(vehicles_lm)
+```
+
+Again, we received an error.
+
+```{r}
+#Fitting a linear model with log of price because price is large
+#vehicles_lm <- lm(log(price) ~ year + manufacturer + model + fuel, data = vehicles, na.action = #na.exclude)
+
+#summary(vehicles_lm)
+```
+
+Same error message here.
+
+```{r}
+#Fitting a linear model with log of price because price is large
+vehicles_lm <- lm(log(price) ~ year + manufacturer + transmission + fuel, data = vehicles, na.action = na.exclude)
+
+summary(vehicles_lm)
+```
+
+The residuals indicate an ok model because max and min are similar magnitude and suggest symmetry. The p value is significantly lower than 0.01 also suggesting a good fit. 
+
 ```{r}
 library(rpart)
   
@@ -211,19 +258,15 @@ library(tidyverse)
 ```
 
 ```{r}
-vehiclesBag <- randomForest(price ~ ., data = vehicles, subset = trainInd, mtry = 4, ntree = 25)
+#vehiclesBag <- randomForest(price ~  year + manufacturer + transmission + state , data = vehicles, subset = trainInd, mtry = 4, ntree = 25)
 
-#predict to the test data 
-bagPred <- predict(vehiclesBag , newdata = vehicles[-trainInd , ])
+ #predict to the test data 
+#bagPred <- predict(vehiclesBag , newdata = vehicles[-trainInd , ])
   
 # our test MSE
-mean((bagPred - testResponse)^2)
+#mean((bagPred - testResponse)^2)
 ```
-We receive an error because there are missing values in object.
+We receive an error because there are missing values in object price according to the error bar.
 
 
 
-Data Wrangle for purposes of removing "NA"'S and fuller elements
-
-```{r}
-```
