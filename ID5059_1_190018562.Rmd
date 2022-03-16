@@ -105,6 +105,13 @@ ggplot(vehicles, aes(x = factor(state), fill = factor(state))) +
   theme(axis.text.x = element_text(angle = 90, hjust=1, size = 4))
 ```
 
+```{r}
+ggplot(vehicles, aes(x = factor(year), fill = factor(year))) +
+  geom_bar() + 
+  xlab("Year") +
+  theme(axis.text.x = element_text(angle = 90, hjust=1, size = 4))
+```
+
 We will "impute" using the modal; the most common value in that column. This is for non-numeric, character data. The modal can be imputed via the following code;
 
 ```{r}
@@ -124,11 +131,11 @@ vehicles[karacter] <- lapply(vehicles[karacter], function(x)
 
 ```
 
-Now for numeric variables, we use the impute function to change NAs to the mean. 
+Now for numeric variables, we can still use the introduced mode function. 
 
 ```{r}
-vehicles$year[is.na(vehicles$year)] <- median(vehicles$year, na.rm = T)
-vehicles$odometer[is.na(vehicles$odometer)] <- median(vehicles$odometer, na.rm = T)
+vehicles$year[is.na(vehicles$year)] <- mode(vehicles$year)
+vehicles$odometer[is.na(vehicles$odometer)] <- mode(vehicles$odometer)
 ```
 
 We will definitely use state as one of the co-variates because it is a full column. However, we will need to change the variables to be numeric to account for placement in the model.
@@ -178,17 +185,22 @@ testResponse <- vehicles[-trainInd , "price"]
 ```
 
 ```{r}
-vehicles_lm <- lm(price ~ year + manufacturer + transmission + state, data = vehicles, na.action = na.exclude)
+#Fitting a linear model with log of price because price is large
+vehicles_lm <- lm(log(price) ~ year + manufacturer + transmission + state, data = vehicles, na.action = na.exclude)
 
-predict_price <- predict(vehicles_lm, price)
+summary(vehicles_lm)
 ```
 
+The residuals indicate an ok model because max and min are similar magnitude and suggest symmetry. 
 ```{r}
 library(rpart)
   
 # the CP = 0 here means there will be no pruning on the basis of the cross-valdiation - we grow a big tree for pruning later
-fit <- rpart(price ~ year + manufacturer + transmission + state, data = vehicles, na.action = na.exclude, method="class", control = rpart.control(cp=0))
+#fit <- rpart(price ~ year + manufacturer + transmission + state, data = vehicles, na.action = na.exclude, method="class", control = rpart.control(cp=0))
 ```
+
+We attempted to fit the above model. However, we cannot allocate vector of size 1.6Gb.
+
 
 We will train on 80% of our data and then test on 20% of the data.
 
@@ -199,13 +211,13 @@ library(tidyverse)
 ```
 
 ```{r}
-#vehiclesBag <- randomForest(price ~ ., data = vehicles, subset = trainInd, mtry = 12, ntree = 25)
+vehiclesBag <- randomForest(price ~ ., data = vehicles, subset = trainInd, mtry = 4, ntree = 25)
 
-# predict to the test data 
-#bagPred <- predict(vehiclesBag , newdata = vehicles[-trainInd , ])
+#predict to the test data 
+bagPred <- predict(vehiclesBag , newdata = vehicles[-trainInd , ])
   
 # our test MSE
-#mean((bagPred - testResponse)^2)
+mean((bagPred - testResponse)^2)
 ```
 We receive an error because there are missing values in object.
 
