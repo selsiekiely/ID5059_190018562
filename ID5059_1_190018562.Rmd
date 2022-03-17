@@ -202,6 +202,10 @@ vehicles_lm <- lm(log(price) ~ year + manufacturer + transmission + state, data 
 summary(vehicles_lm)
 ```
 
+```{r}
+sum(resid(vehicles_lm)^2)
+```
+
 The residuals indicate an ok model because max and min are similar magnitude and suggest symmetry. The p value is significantly lower than 0.01 also suggesting a good fit.
 
 ```{r}
@@ -232,12 +236,18 @@ Same error message here.
 
 ```{r}
 #Fitting a linear model with log of price because price is large
-vehicles_lm <- lm(log(price) ~ year + manufacturer + transmission + fuel, data = vehicles, na.action = na.exclude)
+vehicles_lm2 <- lm(log(price) ~ year + manufacturer + transmission + fuel, data = vehicles, na.action = na.exclude)
 
 summary(vehicles_lm)
 ```
 
 The residuals indicate an ok model because max and min are similar magnitude and suggest symmetry. The p value is significantly lower than 0.01 also suggesting a good fit. 
+
+```{r}
+sum(resid(vehicles_lm2)^2)
+```
+
+This is quite high for residual error summing. However, it is the same training error as before.
 
 ```{r}
 library(rpart)
@@ -266,7 +276,17 @@ library(tidyverse)
 # our test MSE
 #mean((bagPred - testResponse)^2)
 ```
+
 We receive an error because there are missing values in object price according to the error bar.
 
+```{r}
+library(gbm)
 
+#vehiclesBoost <- gbm(price ~ year + as.factor(manufacturer) + as.factor(transmission) + as.factor(state), data = vehicles[trainInd, ], distribution = "gaussian", n.trees = 5000, cv.folds = 5, interaction.depth = 4, shrinkage = 0.001, verbose = F)
+
+# variable importances
+#summary(vehiclesBoost)
+```
+
+We receive a base::try(x,silent = TRUE) : object 'x' not found error.
 
