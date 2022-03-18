@@ -164,10 +164,10 @@ vehicles$cylinders <- gsub("cylinders", "", as.character(vehicles$cylinders))
 #replace others to be NAs as well
 vehicles$cylinders <- gsub("other", NA, as.character(vehicles$cylinders))
 
-#Group by drive type to replace with fill() NA cylinder values more accurately. This accounts 
+#Group by type to replace with fill() NA cylinder values more accurately. This accounts 
 #for drive and cylinder being correlated.
 vehicles <- vehicles %>%
-  dplyr::group_by(drive) %>%
+  dplyr::group_by(type) %>%
   fill(cylinders, .direction = "downup") %>%
   dplyr::ungroup()
 
@@ -204,14 +204,70 @@ Odometer
 ```{r}
 hist(log(vehicles$odometer), breaks = 50, main = "Histogram of Odometer", xlab = "Odometer value in log miles")
 
-#We remove odometer values greater than 300000 miles and less than 10 miles
+#We remove odometer values greater than 300000 miles(log(300000) = 12.6)  and less than 400 miles (log(400) = 5.99)
+
+vehicles <- vehicles %>%
+  filter(odometer <= 300000) %>%
+  filter(odometer >= 400)
 ```
 
 Transmission
+
+```{r}
+#Automatic and Manual are the dominating variables and we make life easier for ourselves by making transmission binary and removing "others"
+vehicles <- vehicles %>%
+  filter(transmission == "automatic" | transmission == "manual")
+
+#make numeric
+vehicles$transmission <- as.numeric(as.factor(vehicles$transmission))
+```
+
 Drive
-Size
+
+```{r}
+vehicles <- vehicles %>%
+  drop_na(drive)
+
+ggplot(vehicles, aes(x = factor(drive), fill = factor(drive))) +
+  geom_bar() + 
+  xlab("Drive") +
+  theme(axis.text.x = element_text(angle = 90, hjust=1, size = 4))
+
+vehicles$drive <- as.numeric(as.factor(vehicles$drive))
+```
+
 Type
+
+```{r}
+vehicles <- vehicles %>%
+  drop_na(type)
+
+ggplot(vehicles, aes(x = factor(type), fill = factor(type))) +
+  geom_bar() + 
+  xlab("Type") +
+  theme(axis.text.x = element_text(angle = 90, hjust=1, size = 4))
+```
+
 Paint Color
+```{r}
+ggplot(vehicles, aes(x = factor(paint_color), fill = factor(paint_color))) +
+  geom_bar() + 
+  xlab("State") +
+  theme(axis.text.x = element_text(angle = 90, hjust=1, size = 4))
+
+#Lets replace NAs in color using the following mode function
+
+#Create a function that finds the mode
+mode <- function(x){
+      ux <- sort(unique(x))
+      ux[which.max(tabulate(match(x, ux)))] 
+}
+
+
+vehicles$paint_color[is.na(vehicles$paint_color)] <- mode(vehicles$paint_color)
+
+vehicles$paint_color <- as.numeric(as.factor(vehicles$paint_color))
+```
 
 State
 
@@ -220,57 +276,10 @@ ggplot(vehicles, aes(x = factor(state), fill = factor(state))) +
   geom_bar() + 
   xlab("State") +
   theme(axis.text.x = element_text(angle = 90, hjust=1, size = 4))
-```
 
-We will now see the columns with the number of NAs as a percentage
+vehicles$state <- as.character(as.factor(vehicles$state))
 
-```{r}
-colSums(is.na(vehicles))/nrow(vehicles)*100
-```
-
-We will "impute" using the modal; the most common value in that column. This is for non-numeric, character data. The modal can be imputed via the following code;
-
-```{r}
-
-#Create an index for columns that contain non-numeric data (e.g. manufacturer)
-karacter <- !sapply(vehicles, is.numeric)
-
-#Create a function that finds the mode
-mode <- function(x){
-      ux <- sort(unique(x))
-      ux[which.max(tabulate(match(x, ux)))] 
-}
-
-#Replace the NAs in character columns with the most frequent value
-vehicles[karacter] <- lapply(vehicles[karacter], function(x)
-              replace(x, is.na(x), mode(x[!is.na(x)])))
-
-```
-
-Now for numeric variables, we can still use the introduced mode function. 
-
-```{r}
-vehicles$year[is.na(vehicles$year)] <- mode(vehicles$year)
-vehicles$odometer[is.na(vehicles$odometer)] <- mode(vehicles$odometer)
-```
-
-We will definitely use state as one of the co-variates because it is a full column. However, we will need to change the variables to be numeric to account for placement in the model.
-
-```{r}
-sapply(vehicles, class)
-vehicles$year <- as.numeric(vehicles$year)
-vehicles$odometer <- as.numeric(vehicles$odometer)
-vehicles$region <- as.numeric(as.character(vehicles$region))
-as.numeric(vehicles$region, na.rm = TRUE)
-```
-
-```{r}
-
-#Make all entries numeric
-#for(i in 1:ncol(vehicles)) {       
-#  vehicles[ , i] <- as.numeric(as.character(vehicles[ , i]))
-#}
-
+vehicles$state <- as.numeric(as.factor(vehicles$state))
 ```
 
 
