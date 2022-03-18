@@ -8,38 +8,48 @@ output: html_document
 Please find committed changes in my github repository <https://github.com/selsiekiely/ID5059_190018562>.
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, cache = TRUE)
+library(readr)
 ```
 
 Import DataSet containing factors for sales of used cars. This dataset is quite large(1.5GB). We estimate having to reduce the data set quite heavily in order to run models quickly.
 
 ```{r}
-vehicles <- read.csv("C:/Users/Sophia/ID5059/vehicles.csv")
+vehicles <- read_csv("C:/Users/Sophia/ID5059/vehicles.csv")
+summary(vehicles)
 ```
 
-We provide the following data wrangling from reading the general description on KAGGLE:
-
-Remove unnecessary columns such as ‘id’, ’URL', ‘region_url’, 'VIN', ‘image_url’,'description', and 'county' because these do not contain metric data that can be utilised in price entry predictions even with feature engineering.
-
-'lat' and 'long' are removed because they are a feature of location that is metricized in state instead.
-
-'size' removed straight away because kaggle says it is 72% NA.
 
 ```{r, echo = FALSE}
 library(dplyr)
+library(tidyr)
 ```
 
-There are no duplicated rows.
+```{r}
+#Use package Amelia to visualise NA values in dataset
+library(naniar)
+
+vis_miss(vehicles, warn_large_data = FALSE)
+```
+
+Remove unnecessary columns such as ‘id’, ’URL', ‘region_url’, 'VIN', ‘image_url’,'description', 'county' and 'posting_date' because these do not contain metric data that can be utilised in price entry predictions even with feature engineering.
+
+'region', 'lat' and 'long' are removed because they are a feature of location that is metricized in state instead. Their correlations would not work in a random forest model specifically.
+
+'size' removed because kaggle says it is 72% NA
 
 ```{r}
 vehicles <- vehicles %>% 
-  select(-id, -url, -region_url, -VIN, -image_url, -description, -county, -lat, -long, -size)
+  #remove unnecessary columns
+  select(-region, -id, -url, -region_url, -VIN, -image_url,-size, -description, -county, -lat, -long, -posting_date)
 
-#Replace Blanks with NAs
-vehicles[vehicles == ""] <- NA
+#get rid of prices that are 0 or NA
+vehicles <- vehicles %>% 
+  #remove price rows with blanks
+  filter(price != 0 & !is.na(price))
 ```
 
-Even after this removals it is necessary to remove rows that contain too many NAs. If we summarise all the variables we can also locate outliers.
+If we summarise all the variables we can also locate outliers.
 
 ```{r}
 summary(vehicles$price)
@@ -63,37 +73,147 @@ vehicles <- vehicles %>%
 library(ggplot2)
 ```
 
+
 ```{r}
-ggplot(vehicles, aes(x = price)) +
-  geom_density() +
-  facet_wrap(~condition)
+#For easier data analysis
+vehicles <- as_tibble(vehicles)
+
+#remove duplicated rows
+vehicles <- vehicles %>% distinct()
 ```
 
-We can see here that despite NA values holding no whereabouts to their condition, we can see they still follow the same trend in price and it is easy to assume imputes via modal condition.
-
-We will now see the columns with the number of NAs as a percentage
+Years
 
 ```{r}
-colSums(is.na(vehicles))/nrow(vehicles)*100
-```
-
-We will now remove columns condition, cylinders, drive, type and paint color because these contain NAs greater than 20%. Contradiction from earlier when we discussed Condition NAs being easily imputable, however we want to make it easy for ourselves and impute as least values as possible.
-
-```{r}
-vehicles <- vehicles %>% 
-  select(-condition, -cylinders, -drive, -type, -paint_color)
-```
-
-
-
-```{r}
-summary(vehicles$manufacturer)
-
-ggplot(vehicles, aes(x = factor(manufacturer), fill = factor(manufacturer))) +
+ggplot(vehicles, aes(x = factor(year)), fill = factor(year)) +
   geom_bar() + 
+  xlab("Year") +
+  theme(axis.text.x = element_text(angle = 90, hjust=1, size = 4))
+```
+
+We can see that years below 1970 and above 2021 have an inconsistency. Engineering developments would have influenced the manufacturing of cars and we would like a clear trend in our years and respective counts in order to be able to use the data. The slight upwards fluctuations before 1970 could also mean a fashion trend in car type or popularity in manufacturing methods which are inconsistent with measuring years and progress in car manufacturing. Beyond 2021 we have data which should not exist yet.
+
+```{r}
+vehicles <- vehicles %>%
+  filter(year > 1995) %>%
+  filter(year < 2021)
+```
+
+Manufacturer
+
+```{r}
+vehicles_manufact <- vehicles %>% 
+  group_by(manufacturer) %>%   
+  mutate(count_name_occurr = n())
+
+ggplot(vehicles_manufact, aes(x = reorder(factor(manufacturer), -count_name_occurr), fill = factor(manufacturer))) +
+  geom_bar(stat = "count") + 
   xlab("Car Manufacturers") +
   theme(axis.text.x = element_text(angle = 90, hjust=1, size = 4))
 ```
+
+Let us drop rows where manufacturer is unknown. Median, mode or mean would not suffice for the above distributed data.
+
+```{r}
+vehicles <- vehicles %>%
+  drop_na(manufacturer)
+```
+
+Model
+
+```{r}
+vehicles_model <- vehicles %>% 
+  group_by(model) %>%   
+  mutate(count_name_occurr = n())
+
+ggplot(vehicles_model, aes(x = reorder(factor(model), -count_name_occurr), fill = factor(model))) +
+  geom_bar(stat = "count") + 
+  xlab("Car Models") +
+  theme(axis.text.x = element_text(angle = 90, hjust=1, size = 4))
+```
+
+Condition
+
+```{r}
+#Plot initially condition values
+ggplot(vehicles, aes(x = factor(condition), fill = factor(condition))) +
+  geom_bar() + 
+  xlab("Condition") +
+  theme(axis.text.x = element_text(angle = 90, hjust=1, size = 4))
+
+#group by year so condition can be filled with NAs in correlation to year
+vehicles <- vehicles %>%
+  dplyr::group_by(year) %>%
+  fill(condition, .direction = "downup") %>%
+  dplyr::ungroup() %>%
+  drop_na(condition)
+
+class(vehicles$condition)
+
+#convert to numeric values
+vehicles$condition <- recode(vehicles$condition, "salvaged" = 0, "new" = 1, "like new" = 2, "good" = 3, "fair" = 4, "excellent" = 5)
+```
+
+Cylinders
+
+```{r}
+class(vehicles$cylinders)
+#remove "cylinders" character part of data column
+vehicles$cylinders <- gsub("cylinders", "", as.character(vehicles$cylinders))
+
+#replace others to be NAs as well
+vehicles$cylinders <- gsub("other", NA, as.character(vehicles$cylinders))
+
+#Group by drive type to replace with fill() NA cylinder values more accurately. This accounts 
+#for drive and cylinder being correlated.
+vehicles <- vehicles %>%
+  dplyr::group_by(drive) %>%
+  fill(cylinders, .direction = "downup") %>%
+  dplyr::ungroup()
+
+#plot
+ggplot(vehicles, aes(x = factor(cylinders), fill = factor(cylinders))) +
+  geom_bar() + 
+  xlab("State") +
+  theme(axis.text.x = element_text(angle = 90, hjust=1, size = 4))
+
+#make numeric
+vehicles$cylinders <- as.numeric(vehicles$cylinders)
+```
+
+Fuel
+
+```{r}
+class(vehicles$fuel)
+
+#Remove NA rows
+vehicles <- vehicles %>%
+  drop_na(fuel)
+
+ggplot(vehicles, aes(x = factor(fuel), fill = factor(fuel))) +
+  geom_bar() + 
+  xlab("Fuel") +
+  theme(axis.text.x = element_text(angle = 90, hjust=1, size = 4))
+
+#make numeric
+vehicles$fuel <- as.numeric(as.factor(vehicles$fuel))
+```
+
+Odometer
+
+```{r}
+hist(log(vehicles$odometer), breaks = 50, main = "Histogram of Odometer", xlab = "Odometer value in log miles")
+
+#We remove odometer values greater than 300000 miles and less than 10 miles
+```
+
+Transmission
+Drive
+Size
+Type
+Paint Color
+
+State
 
 ```{r}
 ggplot(vehicles, aes(x = factor(state), fill = factor(state))) +
@@ -102,11 +222,10 @@ ggplot(vehicles, aes(x = factor(state), fill = factor(state))) +
   theme(axis.text.x = element_text(angle = 90, hjust=1, size = 4))
 ```
 
+We will now see the columns with the number of NAs as a percentage
+
 ```{r}
-ggplot(vehicles, aes(x = factor(year), fill = factor(year))) +
-  geom_bar() + 
-  xlab("Year") +
-  theme(axis.text.x = element_text(angle = 90, hjust=1, size = 4))
+colSums(is.na(vehicles))/nrow(vehicles)*100
 ```
 
 We will "impute" using the modal; the most common value in that column. This is for non-numeric, character data. The modal can be imputed via the following code;
