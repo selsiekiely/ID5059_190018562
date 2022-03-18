@@ -305,8 +305,8 @@ We could also try machine learning feature selection to show this, however I can
 ```{r}
 set.seed(8562)
 
-library(mlbench)
-library(caret)
+#library(mlbench)
+#library(caret)
 
 #fit_rf=randomForest(price~., data=vehicles, na.action = na.exclude)
 #HOWEVER, the above did not work because of allocating a vector of size 1.3 Gb.
@@ -336,8 +336,8 @@ four digits of student ID number.
 ```{r}
 set.seed(8562)
 
-trainInd_model <- sample(1:nrow(modelled_vehicles), round(nrow(modelled_vehicles)*0.80))
-testResponse_model <- modelled_vehicles[-trainInd , "price"]
+trainInd <- sample(1:nrow(modelled_vehicles), round(nrow(modelled_vehicles)*0.80))
+testResponse <- modelled_vehicles[-trainInd , "price"]
 ```
 
 ```{r}
@@ -363,7 +363,7 @@ testResponse_model <- modelled_vehicles[-trainInd , "price"]
 #varImpPlot(model)
 ```
 
-```{r]}
+```{r}
 #model_tuned <- tuneRF(
 #               x=trainInd_model[,-1], #define predictor variables
 #               y=trainInd_model$price, #define response variable
